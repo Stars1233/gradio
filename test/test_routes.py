@@ -5,6 +5,7 @@ import os
 import tempfile
 import time
 from contextlib import asynccontextmanager, closing
+from pathlib import Path
 from typing import Dict
 from unittest.mock import patch
 
@@ -463,7 +464,7 @@ class TestRoutes:
         assert response.status_code == 403  # not a 404
 
     def test_proxy_route_is_restricted_to_load_urls(self):
-        gr.context.Context.hf_token = "abcdef"
+        gr.context.Context.hf_token = "abcdef"  # type: ignore
         app = routes.App()
         interface = gr.Interface(lambda x: x, "text", "text")
         app.configure_app(interface)
@@ -481,7 +482,7 @@ class TestRoutes:
         )
 
     def test_proxy_does_not_leak_hf_token_externally(self):
-        gr.context.Context.hf_token = "abcdef"
+        gr.context.Context.hf_token = "abcdef"  # type: ignore
         app = routes.App()
         interface = gr.Interface(lambda x: x, "text", "text")
         interface.proxy_urls = {
@@ -499,7 +500,7 @@ class TestRoutes:
     def test_can_get_config_that_includes_non_pickle_able_objects(self):
         my_dict = {"a": 1, "b": 2, "c": 3}
         with Blocks() as demo:
-            gr.JSON(my_dict.keys())
+            gr.JSON(my_dict.keys())  # type: ignore
 
         app, _, _ = demo.launch(prevent_thread_lock=True)
         client = TestClient(app)
@@ -568,6 +569,28 @@ class TestRoutes:
         captured = capsys.readouterr()
         assert "IN CUSTOM LIFESPAN" in captured.out
         assert "AFTER CUSTOM LIFESPAN" in captured.out
+
+    def test_monitoring_link(self):
+        with Blocks() as demo:
+            i = Textbox()
+            o = Textbox()
+            i.change(lambda x: x, i, o)
+
+        app, _, _ = demo.launch(prevent_thread_lock=True)
+        client = TestClient(app)
+        response = client.get("/monitoring")
+        assert response.status_code == 200
+
+    def test_monitoring_link_disabled(self):
+        with Blocks() as demo:
+            i = Textbox()
+            o = Textbox()
+            i.change(lambda x: x, i, o)
+
+        app, _, _ = demo.launch(prevent_thread_lock=True, enable_monitoring=False)
+        client = TestClient(app)
+        response = client.get("/monitoring")
+        assert response.status_code == 403
 
 
 class TestApp:
@@ -664,8 +687,7 @@ class TestQueueRoutes:
     async def test_queue_join_routes_sets_app_if_none_set(self):
         io = Interface(lambda x: x, "text", "text").queue()
         io.launch(prevent_thread_lock=True)
-        io._queue.server_path = None
-
+        assert io.local_url
         client = grc.Client(io.local_url)
         client.predict("test")
 
@@ -687,7 +709,7 @@ class TestDevMode:
         gradio_fast_api = next(
             route for route in app.routes if isinstance(route, starlette.routing.Mount)
         )
-        assert not gradio_fast_api.app.blocks.dev_mode
+        assert not gradio_fast_api.app.blocks.dev_mode  # type: ignore
 
 
 class TestPassingRequest:
@@ -1003,7 +1025,7 @@ class TestShowAPI:
 def test_component_server_endpoints(connect):
     here = os.path.dirname(os.path.abspath(__file__))
     with gr.Blocks() as demo:
-        file_explorer = gr.FileExplorer(root=here)
+        file_explorer = gr.FileExplorer(root_dir=here)
 
     with closing(demo) as io:
         app, _, _ = io.launch(prevent_thread_lock=True)
@@ -1336,3 +1358,45 @@ def test_docs_url():
             assert r.status_code == 200
     finally:
         demo.close()
+
+
+def test_file_access():
+    with gr.Blocks() as demo:
+        gr.Markdown("Test")
+
+    allowed_dir = (Path(tempfile.gettempdir()) / "test_file_access_dir").resolve()
+    allowed_dir.mkdir(parents=True, exist_ok=True)
+    allowed_file = Path(allowed_dir / "allowed.txt")
+    allowed_file.touch()
+
+    not_allowed_file = Path(tempfile.gettempdir()) / "not_allowed.txt"
+    not_allowed_file.touch()
+
+    app, _, _ = demo.launch(
+        prevent_thread_lock=True,
+        blocked_paths=["test/test_files"],
+        allowed_paths=[str(allowed_dir)],
+    )
+    test_client = TestClient(app)
+    try:
+        with test_client:
+            r = test_client.get(f"/file={allowed_dir}/allowed.txt")
+            assert r.status_code == 200
+            r = test_client.get(f"/file={allowed_dir}/../not_allowed.txt")
+            assert r.status_code in [403, 404]  # 403 in Linux, 404 in Windows
+            r = test_client.get("/file=//test/test_files/cheetah1.jpg")
+            assert r.status_code == 403
+            r = test_client.get("/file=test/test_files/cheetah1.jpg")
+            assert r.status_code == 403
+            r = test_client.get("/file=//test/test_files/cheetah1.jpg")
+            assert r.status_code == 403
+            tmp = Path(tempfile.gettempdir()) / "upload_test.txt"
+            tmp.write_text("Hello")
+            with open(str(tmp), "rb") as f:
+                files = {"files": ("..", f)}
+                response = test_client.post("/upload", files=files)
+                assert response.status_code == 400
+    finally:
+        demo.close()
+        not_allowed_file.unlink()
+        allowed_file.unlink()

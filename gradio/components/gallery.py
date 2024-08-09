@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Literal, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from urllib.parse import urlparse
 
 import numpy as np
@@ -50,13 +60,15 @@ class Gallery(Component):
     def __init__(
         self,
         value: (
-            list[np.ndarray | PIL.Image.Image | str | Path | tuple] | Callable | None
+            Sequence[np.ndarray | PIL.Image.Image | str | Path | tuple]
+            | Callable
+            | None
         ) = None,
         *,
         format: str = "webp",
         label: str | None = None,
         every: Timer | float | None = None,
-        inputs: Component | list[Component] | set[Component] | None = None,
+        inputs: Component | Sequence[Component] | set[Component] | None = None,
         show_label: bool | None = None,
         container: bool = True,
         scale: int | None = None,
@@ -66,9 +78,9 @@ class Gallery(Component):
         elem_classes: list[str] | str | None = None,
         render: bool = True,
         key: int | str | None = None,
-        columns: int | tuple | None = 2,
-        rows: int | tuple | None = None,
-        height: int | float | None = None,
+        columns: int | list[int] | Tuple[int, ...] | None = 2,
+        rows: int | list[int] | None = None,
+        height: int | float | str | None = None,
         allow_preview: bool = True,
         preview: bool | None = None,
         selected_index: int | None = None,
@@ -79,6 +91,7 @@ class Gallery(Component):
         show_download_button: bool | None = True,
         interactive: bool | None = None,
         type: Literal["numpy", "pil", "filepath"] = "filepath",
+        show_fullscreen_button: bool = True,
     ):
         """
         Parameters:
@@ -107,6 +120,7 @@ class Gallery(Component):
             show_download_button: If True, will show a download button in the corner of the selected image. If False, the icon does not appear. Default is True.
             interactive: If True, the gallery will be interactive, allowing the user to upload images. If False, the gallery will be static. Default is True.
             type: The format the image is converted to before being passed into the prediction function. "numpy" converts the image to a numpy array with shape (height, width, 3) and values from 0 to 255, "pil" converts the image to a PIL image object, "filepath" passes a str path to a temporary file containing the image. If the image is SVG, the `type` is ignored and the filepath of the SVG is returned.
+            show_fullscreen_button: If True, will show a fullscreen icon in the corner of the component that allows user to view the gallery in fullscreen mode. If False, icon does not appear. If set to None (default behavior), then the icon appears if this Gradio app is launched on Spaces, but not otherwise.
         """
         self.format = format
         self.columns = columns
@@ -122,6 +136,7 @@ class Gallery(Component):
         )
         self.selected_index = selected_index
         self.type = type
+        self.show_fullscreen_button = show_fullscreen_button
 
         self.show_share_button = (
             (utils.get_space() is not None)

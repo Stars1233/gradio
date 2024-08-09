@@ -1,7 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 import gradio as gr
 from gradio.components.file_explorer import FileExplorerData
+from gradio.exceptions import InvalidPathError
 
 
 class TestFileExplorer:
@@ -52,7 +55,7 @@ class TestFileExplorer:
         (Path(tmpdir) / "foo" / "img.png").touch()
         (Path(tmpdir) / "foo" / "bar" / "bar.txt").touch()
 
-        file_explorer = gr.FileExplorer(glob="*.txt", root=Path(tmpdir))
+        file_explorer = gr.FileExplorer(glob="*.txt", root_dir=Path(tmpdir))
         tree = file_explorer.ls(["foo"])
 
         answer = [
@@ -61,3 +64,9 @@ class TestFileExplorer:
             {"name": "file2.txt", "type": "file", "valid": True},
         ]
         assert tree == answer
+
+    def test_file_explorer_prevents_path_traversal(self, tmpdir):
+        file_explorer = gr.FileExplorer(glob="*.txt", root_dir=Path(tmpdir))
+
+        with pytest.raises(InvalidPathError):
+            file_explorer.ls(["../file.txt"])

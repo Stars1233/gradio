@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, Sequence
 
 import numpy as np
 import PIL.Image
@@ -32,7 +32,7 @@ class TextArea(components.Textbox):
         info: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -101,7 +101,7 @@ class Sketchpad(components.ImageEditor):
         label: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -125,6 +125,7 @@ class Sketchpad(components.ImageEditor):
         format: str = "webp",
         layers: bool = True,
         canvas_size: tuple[int, int] | None = None,
+        show_fullscreen_button: bool = True,
     ):
         if not brush:
             brush = Brush(colors=["#000000"], color_mode="fixed")
@@ -159,6 +160,7 @@ class Sketchpad(components.ImageEditor):
             format=format,
             layers=layers,
             canvas_size=canvas_size,
+            show_fullscreen_button=show_fullscreen_button,
         )
 
 
@@ -183,7 +185,7 @@ class Paint(components.ImageEditor):
         label: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -207,6 +209,7 @@ class Paint(components.ImageEditor):
         format: str = "webp",
         layers: bool = True,
         canvas_size: tuple[int, int] | None = None,
+        show_fullscreen_button: bool = True,
     ):
         super().__init__(
             value=value,
@@ -239,6 +242,7 @@ class Paint(components.ImageEditor):
             format=format,
             layers=layers,
             canvas_size=canvas_size,
+            show_fullscreen_button=show_fullscreen_button,
         )
 
 
@@ -253,7 +257,7 @@ class ImageMask(components.ImageEditor):
         self,
         value: str | PIL.Image.Image | np.ndarray | None = None,
         *,
-        height: int | None = None,
+        height: int | str | None = None,
         width: int | str | None = None,
         image_mode: Literal[
             "1", "L", "P", "RGB", "RGBA", "CMYK", "YCbCr", "LAB", "HSV", "I", "F"
@@ -267,7 +271,7 @@ class ImageMask(components.ImageEditor):
         label: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -291,6 +295,7 @@ class ImageMask(components.ImageEditor):
         format: str = "webp",
         layers: bool = True,
         canvas_size: tuple[int, int] | None = None,
+        show_fullscreen_button: bool = True,
     ):
         if not brush:
             brush = Brush(colors=["#000000"], color_mode="fixed")
@@ -325,6 +330,7 @@ class ImageMask(components.ImageEditor):
             format=format,
             layers=layers,
             canvas_size=canvas_size,
+            show_fullscreen_button=show_fullscreen_button,
         )
 
 
@@ -342,13 +348,15 @@ class PlayableVideo(components.Video):
         ) = None,
         *,
         format: Literal["mp4"] = "mp4",
-        sources: list[Literal["upload", "webcam"]] | None = None,
+        sources: list[Literal["upload", "webcam"]]
+        | Literal["upload", "webcam"]
+        | None = None,
         height: int | str | None = None,
         width: int | str | None = None,
         label: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -369,6 +377,7 @@ class PlayableVideo(components.Video):
         min_length: int | None = None,
         max_length: int | None = None,
         loop: bool = False,
+        watermark: str | Path | None = None,
     ):
         sources = ["upload"]
         super().__init__(
@@ -398,6 +407,7 @@ class PlayableVideo(components.Video):
             min_length=min_length,
             max_length=max_length,
             loop=loop,
+            watermark=watermark,
         )
 
 
@@ -412,12 +422,14 @@ class Microphone(components.Audio):
         self,
         value: str | Path | tuple[int, np.ndarray] | Callable | None = None,
         *,
-        sources: list[Literal["upload", "microphone"]] | None = None,
+        sources: list[Literal["upload", "microphone"]]
+        | Literal["upload", "microphone"]
+        | None = None,
         type: Literal["numpy", "filepath"] = "numpy",
         label: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -489,7 +501,7 @@ class Files(components.File):
         label: str | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         show_label: bool | None = None,
@@ -547,7 +559,7 @@ class Numpy(components.Dataframe):
         show_label: bool | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         height: int = 500,
@@ -611,7 +623,7 @@ class Matrix(components.Dataframe):
         show_label: bool | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         height: int = 500,
@@ -675,7 +687,7 @@ class List(components.Dataframe):
         show_label: bool | None = None,
         every: Timer | float | None = None,
         inputs: components.Component
-        | list[components.Component]
+        | Sequence[components.Component]
         | set[components.Component]
         | None = None,
         height: int = 500,

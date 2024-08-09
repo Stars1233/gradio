@@ -11,15 +11,14 @@ import gradio as gr
 from gradio import processing_utils
 from gradio.components.base import Component
 from gradio.data_classes import GradioModel, GradioRootModel
+from gradio.templates import TextArea
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 
 class TestGettingComponents:
     def test_component_function(self):
-        assert isinstance(
-            gr.components.component("textarea", render=False), gr.templates.TextArea
-        )
+        assert isinstance(gr.components.component("textarea", render=False), TextArea)
 
     @pytest.mark.parametrize(
         "component, render, unrender, should_be_rendered",
@@ -125,8 +124,10 @@ def test_component_example_payloads(io_components):
     for component in io_components:
         if component == PDF:
             continue
-        elif component in [gr.BarPlot, gr.LinePlot, gr.ScatterPlot]:
+        elif issubclass(component, gr.components.NativePlot):
             c: Component = component(x="x", y="y")
+        elif component == gr.FileExplorer:
+            c: Component = component(root_dir="gradio")
         else:
             c: Component = component()
         data = c.example_payload()
@@ -141,4 +142,4 @@ def test_component_example_payloads(io_components):
                 data = c.data_model(**data)  # type: ignore
             elif issubclass(c.data_model, GradioRootModel):  # type: ignore
                 data = c.data_model(root=data)  # type: ignore
-        c.preprocess(data)
+        c.preprocess(data)  # type: ignore

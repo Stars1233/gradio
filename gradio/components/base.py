@@ -12,14 +12,14 @@ import warnings
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Type
+from typing import TYPE_CHECKING, Any, Callable, Sequence, Type
 
 import gradio_client.utils as client_utils
 
 from gradio import utils
 from gradio.blocks import Block, BlockContext
 from gradio.component_meta import ComponentMeta
-from gradio.data_classes import GradioDataModel, JsonData
+from gradio.data_classes import BaseModel, DeveloperPath, GradioDataModel
 from gradio.events import EventListener
 from gradio.layouts import Form
 from gradio.processing_utils import move_files_to_cache
@@ -105,7 +105,7 @@ class ComponentBase(ABC, metaclass=ComponentMeta):
 
     @property
     @abstractmethod
-    def skip_api(self):
+    def skip_api(self) -> bool:
         """Whether this component should be skipped from the api return value"""
 
     @classmethod
@@ -148,7 +148,7 @@ class Component(ComponentBase, Block):
         key: int | str | None = None,
         load_fn: Callable | None = None,
         every: Timer | float | None = None,
-        inputs: Component | list[Component] | set[Component] | None = None,
+        inputs: Component | Sequence[Component] | set[Component] | None = None,
     ):
         self.server_fns = [
             getattr(self, value)
@@ -204,11 +204,16 @@ class Component(ComponentBase, Block):
             | tuple[
                 Callable,
                 list[tuple[Block, str]],
-                Component | list[Component] | set[Component] | None,
+                Component | Sequence[Component] | set[Component] | None,
             ]
         ) = None
         load_fn, initial_value = self.get_load_fn_and_initial_value(value, inputs)
         initial_value = self.postprocess(initial_value)
+        # Serialize the json value so that it gets stored in the
+        # config as plain json, for images/audio etc. `move_files_to_cache`
+        # will call model_dump
+        if isinstance(initial_value, BaseModel):
+            initial_value = initial_value.model_dump()
         self.value = move_files_to_cache(
             initial_value,
             self,  # type: ignore
@@ -223,7 +228,7 @@ class Component(ComponentBase, Block):
 
         self.component_class_id = self.__class__.get_component_class_id()
 
-    TEMPLATE_DIR = "./templates/"
+    TEMPLATE_DIR = DeveloperPath("./templates/")
     FRONTEND_DIR = "../../frontend/"
 
     def get_config(self):
@@ -255,7 +260,7 @@ class Component(ComponentBase, Block):
         self,
         callable: Callable,
         every: Timer | float | None,
-        inputs: Component | list[Component] | set[Component] | None = None,
+        inputs: Component | Sequence[Component] | set[Component] | None = None,
     ):
         """Add an event that runs `callable`, optionally at interval specified by `every`."""
         if isinstance(inputs, Component):
@@ -332,7 +337,7 @@ class Component(ComponentBase, Block):
             payload = self.data_model.from_json(payload)
             Path(flag_dir).mkdir(exist_ok=True)
             payload = payload.copy_to_dir(flag_dir).model_dump()
-        if isinstance(payload, JsonData):
+        if isinstance(payload, BaseModel):
             payload = payload.model_dump()
         if not isinstance(payload, str):
             payload = json.dumps(payload)
@@ -368,7 +373,7 @@ class StreamingOutput(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def stream_output(
         self, value, output_id: str, first_chunk: bool
-    ) -> tuple[bytes, Any]:
+    ) -> tuple[bytes | None, Any]:
         pass
 
 

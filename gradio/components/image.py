@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 
 import numpy as np
 import PIL.Image
@@ -38,13 +38,14 @@ class Image(StreamingInput, Component):
         Events.stream,
         Events.select,
         Events.upload,
+        Events.input,
     ]
 
     data_model = FileData
 
     def __init__(
         self,
-        value: str | PIL.Image.Image | np.ndarray | None = None,
+        value: str | PIL.Image.Image | np.ndarray | Callable | None = None,
         *,
         format: str = "webp",
         height: int | str | None = None,
@@ -52,11 +53,13 @@ class Image(StreamingInput, Component):
         image_mode: Literal[
             "1", "L", "P", "RGB", "RGBA", "CMYK", "YCbCr", "LAB", "HSV", "I", "F"
         ] = "RGB",
-        sources: list[Literal["upload", "webcam", "clipboard"]] | None = None,
+        sources: list[Literal["upload", "webcam", "clipboard"]]
+        | Literal["upload", "webcam", "clipboard"]
+        | None = None,
         type: Literal["numpy", "pil", "filepath"] = "numpy",
         label: str | None = None,
         every: Timer | float | None = None,
-        inputs: Component | list[Component] | set[Component] | None = None,
+        inputs: Component | Sequence[Component] | set[Component] | None = None,
         show_label: bool | None = None,
         show_download_button: bool = True,
         container: bool = True,
@@ -71,6 +74,7 @@ class Image(StreamingInput, Component):
         key: int | str | None = None,
         mirror_webcam: bool = True,
         show_share_button: bool | None = None,
+        show_fullscreen_button: bool = True,
     ):
         """
         Parameters:
@@ -98,6 +102,7 @@ class Image(StreamingInput, Component):
             key: if assigned, will be used to assume identity across a re-render. Components that have the same key across a re-render will have their value preserved.
             mirror_webcam: If True webcam will be mirrored. Default is True.
             show_share_button: If True, will show a share icon in the corner of the component that allows user to share outputs to Hugging Face Spaces Discussions. If False, icon does not appear. If set to None (default behavior), then the icon appears if this Gradio app is launched on Spaces, but not otherwise.
+            show_fullscreen_button: If True, will show a fullscreen icon in the corner of the component that allows user to view the image in fullscreen mode. If False, icon does not appear.
         """
         self.format = format
         self.mirror_webcam = mirror_webcam
@@ -135,6 +140,7 @@ class Image(StreamingInput, Component):
             if show_share_button is None
             else show_share_button
         )
+        self.show_fullscreen_button = show_fullscreen_button
         super().__init__(
             label=label,
             every=every,

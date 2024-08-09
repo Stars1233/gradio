@@ -13,6 +13,7 @@ from typing import (
     List,
     Literal,
     Optional,
+    Sequence,
     Tuple,
     Union,
     cast,
@@ -148,7 +149,9 @@ class ImageEditor(Component):
         image_mode: Literal[
             "1", "L", "P", "RGB", "RGBA", "CMYK", "YCbCr", "LAB", "HSV", "I", "F"
         ] = "RGBA",
-        sources: Iterable[Literal["upload", "webcam", "clipboard"]] | None = (
+        sources: Iterable[Literal["upload", "webcam", "clipboard"]]
+        | Literal["upload", "webcam", "clipboard"]
+        | None = (
             "upload",
             "webcam",
             "clipboard",
@@ -156,7 +159,7 @@ class ImageEditor(Component):
         type: Literal["numpy", "pil", "filepath"] = "numpy",
         label: str | None = None,
         every: Timer | float | None = None,
-        inputs: Component | list[Component] | set[Component] | None = None,
+        inputs: Component | Sequence[Component] | set[Component] | None = None,
         show_label: bool | None = None,
         show_download_button: bool = True,
         container: bool = True,
@@ -178,6 +181,7 @@ class ImageEditor(Component):
         format: str = "webp",
         layers: bool = True,
         canvas_size: tuple[int, int] | None = None,
+        show_fullscreen_button: bool = True,
     ):
         """
         Parameters:
@@ -210,6 +214,7 @@ class ImageEditor(Component):
             format: Format to save image if it does not already have a valid format (e.g. if the image is being returned to the frontend as a numpy array or PIL Image).  The format should be supported by the PIL library. This parameter has no effect on SVG files.
             layers: If True, will allow users to add layers to the image. If False, the layers option will be hidden.
             canvas_size: The size of the default canvas in pixels. If a tuple, the first value is the width and the second value is the height. If None, the canvas size will be the same as the background image or 800 x 600 if no background image is provided.
+            show_fullscreen_button: If True, will display button to view image in fullscreen mode.
         """
         self._selectable = _selectable
         self.mirror_webcam = mirror_webcam
@@ -224,7 +229,7 @@ class ImageEditor(Component):
         self.image_mode = image_mode
         valid_sources = ["upload", "webcam", "clipboard"]
         if isinstance(sources, str):
-            sources = [sources]  # type: ignore
+            sources = [sources]
         if sources is not None:
             for source in sources:
                 if source not in valid_sources:
@@ -251,6 +256,7 @@ class ImageEditor(Component):
         self.format = format
         self.layers = layers
         self.canvas_size = canvas_size
+        self.show_fullscreen_button = show_fullscreen_button
 
         super().__init__(
             label=label,
